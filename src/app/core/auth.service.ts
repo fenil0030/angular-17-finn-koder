@@ -1,10 +1,9 @@
-import { Inject, Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, of, Subject, throwError } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { LocalStoreService } from './local-store.service';
-import { AuthUtils } from './auth.utils';
+import { v4 as uuidv4 } from 'uuid';
+import { CookieService } from 'ngx-cookie-service';
 
 // ================= only for demo purpose ===========
 const DEMO_TOKEN =
@@ -19,8 +18,7 @@ const DEMO_TOKEN =
 
 @Injectable()
 export class AuthService {
-  private baseUrl: string = environment.baseUrl + '/api/';
-  private accessUrl: string = environment.accessUrl;
+  private baseUrl: string = environment.baseUrl + '/';
 
   private _isLoggedInSource = new BehaviorSubject(false);
   isLoggedIn = this._isLoggedInSource.asObservable();
@@ -33,17 +31,15 @@ export class AuthService {
    */
   constructor(
     private _httpClient: HttpClient,
-    private _router: Router,
-    private _activatedRoute: ActivatedRoute,
-    private ls: LocalStoreService
+    private cookieService: CookieService
   ) {
 
     this.onUserListChange = new BehaviorSubject({});
 
-    if (this.ls.getItem(environment.appNameLst) && Object.keys(this.ls.getItem(environment.appNameLst)).length === 0) {
-      this.userList = [];
-      this.saveUser();
-    }
+    // if (this.ls.getItem(environment.appNameLst) && Object.keys(this.ls.getItem(environment.appNameLst)).length === 0) {
+    //   this.userList = [];
+    //   this.saveUser();
+    // }
   }
 
   // -----------------------------------------------------------------------------------------------------
@@ -54,26 +50,27 @@ export class AuthService {
    * Setter & getter for access token
    */
   set accessToken(token: string) {
-    localStorage.setItem(environment.appJwtTokenName, token);
+    this.cookieService.set(environment.appJwtTokenName, JSON.stringify(token))
   }
 
   get accessToken(): string {
-    return localStorage.getItem(environment.appJwtTokenName) ?? '';
+    const cookieValue = this.cookieService.get(environment.appJwtTokenName);
+    if (cookieValue == '' || cookieValue == undefined || cookieValue == null) {
+      return ''
+    }
+    return JSON.parse(cookieValue);
   }
 
   getUser() {
-    const value = window.localStorage.getItem(environment.appName);
-    try {
-      return JSON.parse(value!);
-    } catch (e) {
-      return null;
+    const cookieValue = this.cookieService.get(environment.appName);
+    if (cookieValue == '' || cookieValue == undefined || cookieValue == null) {
+      return ''
     }
+    return JSON.parse(cookieValue);
   }
 
   setUser(user: any) {
-    let value = JSON.stringify(user);
-    window.localStorage.setItem(environment.appName, value);
-    return true;
+    this.cookieService.set(environment.appName, JSON.stringify(user))
   }
 
 
@@ -81,71 +78,51 @@ export class AuthService {
   // @ Public methods
   // -----------------------------------------------------------------------------------------------------
 
-
-  getUserList(): void {
-    this.userList = this.ls.getItem(environment.appNameLst) ?? [];
-    this.onUserListChange.next(this.userList);
-  }
-
-  addToUser(addedItem: any) {
-    this.userList.push(addedItem);
-    this.saveUser();
-  }
-
-  saveUser(): void {
-    this.ls.setItem(environment.appNameLst, this.userList);
-    this.getUserList();
-  }
-
-
   signUp(regObj: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.getUserList();
-      let user = this.userList.filter((x) => x.username == regObj.username && x.password == regObj.password)[0];
-      if (!user || user == null || user == undefined) {
-        this.addToUser(regObj);
-        this._isLoggedInSource.next(true);
-        resolve(user);
-      }
-      reject('User is already exsit');
+      regObj.id = uuidv4();
+      this._httpClient.post(`${this.baseUrl}posts`, regObj).subscribe({
+        next: async (response: any) => {
+          if (response && response != null && response.id > 0) {
+            this.accessToken = DEMO_TOKEN;
+            await this.setUser(response);
+            this._isLoggedInSource.next(true);
+          }
+          //show error
+          resolve(response);
+        },
+        error: err => {
+          console.log(err);
+          reject(err);
+        }
+      });
     });
   }
 
   signIn(loginReqObj: any): Promise<any> {
-
     return new Promise((resolve, reject) => {
-      this.getUserList();
-      let user = this.userList.filter((x) => x.username == loginReqObj.username && x.password == loginReqObj.password)[0];
-      if (user && user != null && user != undefined) {
-        user.accessToken = DEMO_TOKEN;
-        this.accessToken = DEMO_TOKEN;
-        this.setUser(user);
-        this._isLoggedInSource.next(true);
-        resolve(user);
-      }
-      reject('"Please enter valid username and pasword"')
+      this._httpClient.get(`${this.baseUrl}posts`).subscribe({
+        next: async (response: any) => {
+          if (response && response != null && response.length > 0) {
+            let user = response.filter((x: any) => x.username == loginReqObj.username && x.password == loginReqObj.password)[0];
+            if (user && user != null && user != undefined) {
+              user.accessToken = DEMO_TOKEN;
+              this.accessToken = DEMO_TOKEN;
+              this.setUser(user);
+              this._isLoggedInSource.next(true);
+              resolve(user);
+            }
+            reject('"Please enter valid username and pasword"')
+          }
+          //show error
+          reject("Something went wrong");
+        },
+        error: err => {
+          console.log(err);
+          reject(err);
+        }
+      });
     });
-
-    //FOLLOWING CODE SENDS SIGNIN REQUEST TO SERVER
-    // return new Promise((resolve, reject) => {
-    //   this._httpClient.post(`${this.baseUrl}Account/SignIn`, loginReqObj).subscribe({
-    //     next: async (response: any) => {
-    //       if (response && Boolean(response.meta["status"])) {
-    //         // this.setUserRights(response.webRights);
-    //         this.accessToken = response.result.token;
-    //         await this.setUser(response.result);
-    //         // return of(response);
-    //       }
-    //       //show error
-    //       resolve(response);
-    //     },
-    //     error: err => {
-    //       console.log(err);
-    //       this.handleError(err)
-    //       reject(err);
-    //     }
-    //   });
-    // });
   }
 
 
@@ -158,10 +135,10 @@ export class AuthService {
       return of(false);
     }
 
-    // Check the access token expire date
-    if (AuthUtils.isTokenExpired(this.accessToken)) {
-      return of(false);
-    }
+    // // Check the access token expire date
+    // if (AuthUtils.isTokenExpired(this.accessToken)) {
+    //   return of(false);
+    // }
 
     // If the access token exists and it didn't expire, Refresh it JwtToken
     // return this.RefreshJwtToken();//ideal check
@@ -173,8 +150,7 @@ export class AuthService {
    * Sign out
    */
   signOut(): Observable<any> {
-    // Remove the access token from the local storage
-    localStorage.removeItem(environment.appJwtTokenName);
+    this.cookieService.delete(environment.appJwtTokenName);
     this.setUser(null);
     // Return the observable
     return of(true);

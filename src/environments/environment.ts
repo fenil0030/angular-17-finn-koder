@@ -7,7 +7,7 @@ export const environment = {
   appNameLst: "lst_ECOM_Application",
   appJwtTokenName: "AXJTN_ECOM_Application",
   production: false,
-  baseUrl: "https://localhost:7192",
+  baseUrl: "http://localhost:3000",
   accessUrl: "A60B12E8645CDB4601B462B045273F4EF565F1BC754D471B7C799BD066A58159DF69BA200CC3D9F4B4F77C186B79FDBA82E63398083D897615601F16BB5836F6",
   canEditOnly: "Admin"
 };

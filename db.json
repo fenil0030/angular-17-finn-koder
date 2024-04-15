@@ -1,0 +1,28 @@
+{
+  "posts": [
+    {
+      "id": "93d8e057-5363-4aae-b368-8025507c238d",
+      "username": "test123",
+      "password": "test@123",
+      "email": "test123@gmail.com"
+    },
+    {
+      "id": "93d8e057-9748-4aae-b368-8025507c238d",
+      "username": "test456",
+      "password": "test@456",
+      "email": "test456@gmail.com"
+    },
+    {
+      "id": "93d8e057-0340-4aae-b368-8025507c238d",
+      "username": "test789",
+      "password": "test@789",
+      "email": "test789@gmail.com"
+    },
+    {
+      "id": "93d8e057-0940-4aae-b368-8025507c238d",
+      "username": "sadmin",
+      "email": "f123.ce@gmail.com",
+      "password": "123456"
+    }
+  ]
+}
