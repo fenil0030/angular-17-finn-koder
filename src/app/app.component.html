@@ -1,0 +1,39 @@
+<div id="app">
+  <nav class="navbar navbar-expand navbar-dark bg-dark">
+    <a href="#" class="navbar-brand">finnKoder</a>
+    <ul class="navbar-nav mr-auto" routerLinkActive="active">
+      @if (isLoggedIn) {
+      <li class="nav-item">
+        <a [routerLink]="['view/home']" class="nav-link" routerLink="home">Home </a>
+      </li>
+        <li class="nav-item">
+          <a [routerLink]="['view/profile']" class="nav-link" routerLink="user">profile</a>
+        </li>
+      }
+    </ul>
+
+    @if (!isLoggedIn) {
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a [routerLink]="['auth/register']" class="nav-link" routerLink="register">Sign Up</a>
+        </li>
+        <li class="nav-item">
+          <a [routerLink]="['auth/login']" class="nav-link" routerLink="login">Login</a>
+        </li>
+      </ul>
+    } @else {
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a [routerLink]="['view/profile']" class="nav-link" routerLink="profile">{{ username }}</a>
+        </li>
+        <li class="nav-item">
+          <a [routerLink]="[]" class="nav-link" (click)="logout()">LogOut</a>
+        </li>
+      </ul>
+    }
+  </nav>
+
+  <div class="container">
+    <router-outlet></router-outlet>
+  </div>
+</div>
